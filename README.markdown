@@ -14,4 +14,4 @@ This will either:
 
 The easiest way to install is to install Vundle and then do
 
-Bundle 'Kashomon/gobu'
+      Bundle 'Kashomon/gobu'
