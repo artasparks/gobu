@@ -14,6 +14,7 @@ function! gobu#GoBuilder()
   else
     call s:SetErrors(system('go build ' . dir))
   endif
+  redraw!
 endfunction
 
 function! s:SetErrors(errs)
