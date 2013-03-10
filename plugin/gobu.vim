@@ -28,7 +28,7 @@ function! s:SetErrors(errs)
   let win_height = len(out)
   if win_height < 5
     let win_height = 5
-  elseif winheight > 24
+  elseif win_height > 24
     let win_height = 5
   else
     let win_height = win_height + 1
