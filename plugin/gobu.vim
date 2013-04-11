@@ -1,18 +1,21 @@
-command GoBuilder call gobu#GoBuilder()
+command! -bang -complete=file GoBu call gobu#GoBuilder('build')
+command! -bang -complete=file GoTe call gobu#GoBuilder('test')
 
-function! gobu#GoBuilder()
-  let file_name = expand('%')
-  let dir = substitute(expand('%:p:h'), getcwd(), '', '')
-
-  if file_name =~ '_test\.go$'
-    let build_out = system('go test' . dir)
+function! gobu#GoBuilder(type)
+  let package = substitute(
+      \ expand('%:h')
+      \ '.*/src/\(.*\)',
+      \ '\1',
+      \ '')
+  if a:type ==# 'test'
+    let build_out = system('go test' . package)
     if build_out !~ '\[build failed\]'
       call s:SetErrors(build_out)
     else
-      call s:SetErrors(system('go build ' . dir))
+      call s:SetErrors(system('go install ' . package))
     endif
   else
-    call s:SetErrors(system('go build ' . dir))
+    call s:SetErrors(system('go install ' . package))
   endif
   redraw!
 endfunction
