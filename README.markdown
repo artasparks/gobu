@@ -3,7 +3,7 @@ Gobu: A Go Build Tool
 
 ![Gobu Test Failure](http://i.imgur.com/uVg9sDa.png)
 
-Gobu is simple [Go](www.golang.org) build tool for Vim.
+Gobu is simple [Go](http://www.golang.org) build tool for Vim.
 
 The primary improvement of Gobu over a default quickfix integration is that the
 entire output of a command is put into the Gobu Window.  This means that we get
