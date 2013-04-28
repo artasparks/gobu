@@ -16,8 +16,8 @@ It exposes the following commands to the user:
       :GoTest -- test current package
       :GoFmt -- go format current package
 
-Gobu also supports recursive versions of the commands, by doing adding a
-trailing bang:
+Gobu also supports recursive versions of the commands, by adding a trailing
+bang:
 
       :GoBuild! -- recursive build, starting from current package
       :GoTest! -- recursive test, startingc from current package
