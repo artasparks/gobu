@@ -1,7 +1,7 @@
 Gobu: A Go Build Tool
 ====
 
-[Gobu Test Failure](http://i.imgur.com/f830dJX.png)
+![Gobu Test Failure](http://i.imgur.com/f830dJX.png)
 
 Gobu is simple Go Build tool for Vim.  The primary of Gobu improvement over a
 default quickfix integration is that the entire output of a build or test is
@@ -23,9 +23,9 @@ plugin manager manager)
 
 ### Panic!
 
-[Gobu Panic](http://imgur.com/5eD6hSl)
+![Gobu Panic](http://imgur.com/5eD6hSl)
 
 ### Build Failure
 
-[Gobu Panic](http://imgur.com/rYQ9obJ)
+![Gobu Panic](http://imgur.com/rYQ9obJ)
 
