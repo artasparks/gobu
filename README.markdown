@@ -23,9 +23,9 @@ plugin manager manager)
 
 ### Panic!
 
-![Gobu Panic](http://i.imgur.com/5eD6hSl)
+![Gobu Panic](http://i.imgur.com/5eD6hSl.png)
 
 ### Build Failure
 
-![Gobu Panic](http://i.imgur.com/rYQ9obJ)
+![Gobu Panic](http://i.imgur.com/rYQ9obJ.png)
 
