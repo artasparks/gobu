@@ -26,9 +26,10 @@ bang:
 
 ### The Gobu Window
 
-Right now, the GobuWindow remaps two keys:
+Right now, the GobuWindow remaps following keys:
 
       <CR> (enter) -- jump to a file location under the cursor
+      R -- rerun the last command
       q -- close the window
 
 ### Installing

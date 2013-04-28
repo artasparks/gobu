@@ -23,7 +23,7 @@ function! gobu#GoCommand(cmd, ...) abort
     return
   endif
   let l:full_cmd = 'go ' . a:cmd . ' ' . l:package . l:suffix
-  call s:SetOutput(system(l:full_cmd), l:full_cmd, a:cmd)
+  call s:SetOutput(l:full_cmd, a:cmd)
 endfunction
 
 function s:ClearOldGobu()
@@ -35,8 +35,9 @@ function s:ClearOldGobu()
   call winrestview(l:prev_window_view)
 endfunction
 
-function! s:SetOutput(errs, full_cmd, cmd)
-  let l:lines = split(s:Trim(a:errs), '\n')
+function! s:SetOutput(full_cmd, cmd)
+  let l:errs = system(a:full_cmd)
+  let l:lines = split(s:Trim(l:errs), '\n')
   if empty(l:lines)
     echohl Type
     exe 'echomsg "Gobu: [' . a:full_cmd . '] : SUCCESS"'
@@ -54,13 +55,24 @@ function! s:SetOutput(errs, full_cmd, cmd)
   call winrestview(s:saved_view)
   exe s:gobu_window . ' wincmd w'
 
+  let b:executed_full_cmd = a:full_cmd
   let b:executed_cmd = a:cmd
 
+  " Set Output
   nnoremap <buffer> q :q<CR>
   nnoremap <buffer> <CR> :call gobu#ExecuteOnWindow()<CR>
+  nnoremap <buffer> R :call gobu#Rerun()<CR>
 endfunction
 
-function! gobu#ExecuteOnWindow()
+" Rerun the command
+function! gobu#Rerun()
+  let l:last_full_command = b:executed_full_cmd
+  let l:last_command = b:executed_cmd
+  close
+  call s:SetOutput(l:last_full_command, l:last_command)
+endfunction
+
+function! gobu#ExecuteOnWindow() abort
   let l:curline = getline('.')
   let l:path_regex = '^\t\?\(\.\?/\?[[:alnum:]_/+-]\+\.\(go\|c\|cpp\)\):\(\d*\).*'
 
@@ -75,22 +87,23 @@ function! gobu#ExecuteOnWindow()
     " For this, we search done from the current position to find somthing that
     " looks like a package.  Then, we use 'go list' to determine the directory
     " path.
+    let l:pack_pattern = '^\(ok\|FAIL\|?\)\s*\t\(.*\)\t\d\+\.\d\+.*'
+    let l:pack_line_num = search(l:pack_pattern, 'nc')
+    let l:pack_line = getline(l:pack_line_num)
+    exe s:oldwindow . ' wincmd w'
+
     let l:dir = ''
-    if !filereadable(l:file)
+    if !filereadable(l:file) && l:pack_line_num > 0
       "Assume that the reason is that we need get the directory path.
-      let l:pack_pattern = '^\(ok\|FAIL\|?\)\s*\t\(.*\)\t\d\+\.\d\+.*'
-      let l:pack_line_num = search(l:pack_pattern, 'nc')
-      let l:pack_line = getline(l:pack_line_num)
       let l:found_package = substitute(l:pack_line, l:pack_pattern, '\2', '')
       let l:dir = s:Trim(system('go list -f "{{.Dir}}" ' . l:found_package))
     endif
 
-    exe s:oldwindow . ' wincmd w'
     " Append absolute path and try again
     let l:file = !empty(l:dir) ? l:dir . '/' . l:file : l:file
     if !filereadable(l:file)
       echohl WarningMSG
-      echomsg 'Couldn't read file: ' . l:file
+      echomsg 'Could not read file: ' . l:file
       echohl NONE
     endif
     exe 'edit ' . l:file
