@@ -3,13 +3,15 @@ Gobu: A Go Build Tool
 
 ![Gobu Test Failure](http://i.imgur.com/uVg9sDa.png)
 
-Gobu is simple Go Build tool for Vim.  The primary of Gobu improvement over a
-default quickfix integration is that the entire output of a build or test is
-put into the Gobu Window.  This means that we get the entire message -- no
-truncation, no munging, *and* we still get the useful jump-to-error feature of
-quickfix (by pressing enter while on the same line as a file path).
+Gobu is simple Go Build tool for Vim.
 
-It exposes the following commands to the user:
+The primary improvement of Gobu over a default quickfix integration is that the
+entire output of a command is put into the Gobu Window.  This means that we get
+the entire message -- no truncation, no munging, *and* we still get the useful
+jump-to-error feature of quickfix (by pressing enter while on the same line as
+a file path).
+
+Gobu exposes the following commands to the user:
 
       :GoBuild -- build current package
       :GoInstall -- install current package
