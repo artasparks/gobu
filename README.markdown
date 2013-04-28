@@ -44,7 +44,7 @@ and then do a :BundleUpdate
 
 ![Gobu Panic](http://i.imgur.com/5eD6hSl.png)
 
-### Build Failure
+### Test Failure
 
-![Gobu Panic](http://i.imgur.com/rYQ9obJ.png)
+![Gobu Test Failure](http://i.imgur.com/f830dJX.png)
 
