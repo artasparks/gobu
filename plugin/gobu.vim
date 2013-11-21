@@ -1,11 +1,9 @@
-" TODO(kashomon): Add Package completion.  This is already built into the base
-" go-vim plugin.
+" TODO(kashomon): Add Package completion.
 command! -bang GoBuild call gobu#GoCommand('build', '<bang>' == '!')
 command! -bang GoInstall call gobu#GoCommand('install', '<bang>' == '!')
 command! -bang GoTest call gobu#GoCommand('test', '<bang>' == '!')
 command! -bang GoFmt call gobu#GoCommand('fmt', '<bang>' == '!')
-" TODO(kashomon): Add a Run command
-" command! -bang -complete=file GoRun call gobu#GoCommand('run', '<bang>' == '!')
+command! GoRun call gobu#GoCommand('run')
 
 if !exists('g:gobu_max_winheight')
   let g:gobu_max_winheight = 15

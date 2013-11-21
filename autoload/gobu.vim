@@ -3,35 +3,64 @@ let s:gobu_window = -2
 
 let s:allowed_commands = {
     \ 'build' : 1,
+    \ 'run' : 1,
     \ 'install' : 1,
     \ 'test' : 1,
     \ 'fmt' : 1,
     \ }
 
 function! gobu#GoCommand(cmd, ...) abort
-  let l:do_recursive = a:0 >= 1 ? a:1 : 0
-  if bufexists(s:gobufile) && bufloaded(s:gobufile)
-    call s:ClearOldGobu()
+  let l:go_exec = 'go'
+  let l:is_appengine = 0
+  if expand('%:p') =~# '/go_appengine/' && g:gobu_detect_appengine
+    let l:go_exec = expand('%:p:h:s?/go_appengine/.*?/go_appengine/goapp?')
+    let l:is_appengine = 1
   endif
-  let l:curdir = expand('%:p:h')
-  let l:package = s:Trim(system('cd ' . l:curdir . ' && go list'))
-  let l:suffix = l:do_recursive == 1 ? '/...' : ''
-  if !has_key(s:allowed_commands, a:cmd)
-    echohl WarningMSG
-    echomsg 'Unknown Go Command: ' . a:cmd
-    echohl NONE
+
+  if a:cmd == 'run'
+    call gobu#RunCurrentFile(l:go_exec)
     return
   endif
-  let l:full_cmd = 'go ' . a:cmd . ' ' . l:package . l:suffix
+
+  if l:is_appengine
+    let l:desired_cmd = a:cmd
+    if a:cmd == 'install'
+      " Install isn't supported and doesn't really make sense for appengine.
+      " Thus, just do
+      let l:desired_cmd = 'build'
+    endif
+    let l:full_cmd = l:go_exec . ' ' . l:desired_cmd
+  else
+    let l:do_recursive = a:0 >= 1 ? a:1 : 0
+    if bufexists(s:gobufile) && bufloaded(s:gobufile)
+      call s:ClearOldGobu()
+    endif
+    let l:curdir = expand('%:p:h')
+    let l:package = s:Trim(system('cd ' . l:curdir . ' && '
+        \ . l:go_exec . ' list'))
+    let l:suffix = l:do_recursive == 1 ? '/...' : ''
+    if !has_key(s:allowed_commands, a:cmd)
+      echohl WarningMSG
+      echomsg 'Unknown Go Command: ' . a:cmd
+      echohl NONE
+      return
+    endif
+    let l:full_cmd = l:go_exec . ' ' . a:cmd . ' ' . l:package . l:suffix
+  endif
   call s:SetOutput(l:full_cmd, a:cmd)
+  redraw
+endfunction
+
+function gobu#RunCurrentFile(go_exec)
+  execute '!' . a:go_exec . ' run ' . expand('%')
 endfunction
 
 function s:ClearOldGobu()
   let l:prev_window = winnr()
   let l:prev_window_view = winsaveview()
-  exe s:gobu_window . ' wincmd w'
+  execute s:gobu_window . ' wincmd w'
   close
-  exe l:prev_window . ' wincmd w'
+  execute l:prev_window . ' wincmd w'
   call winrestview(l:prev_window_view)
 endfunction
 
