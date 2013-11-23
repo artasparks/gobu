@@ -36,9 +36,13 @@ function! gobu#GoCommand(cmd, ...) abort
       call s:ClearOldGobu()
     endif
     let l:curdir = expand('%:p:h')
-    let l:package = s:Trim(system('cd ' . l:curdir . ' && '
-        \ . l:go_exec . ' list'))
+    let l:packcmd = 'cd ' . l:curdir . ' && ' . l:go_exec . ' list'
+    let l:package = s:Trim(system(l:packcmd))
     let l:suffix = l:do_recursive == 1 ? '/...' : ''
+    if l:package =~# "can't load package"
+      call s:SetOutput(l:packcmd, 'list', l:package)
+      return
+    endif
     if !has_key(s:allowed_commands, a:cmd)
       echohl WarningMSG
       echomsg 'Unknown Go Command: ' . a:cmd
@@ -47,15 +51,18 @@ function! gobu#GoCommand(cmd, ...) abort
     endif
     let l:full_cmd = l:go_exec . ' ' . a:cmd . ' ' . l:package . l:suffix
   endif
-  call s:SetOutput(l:full_cmd, a:cmd)
+  call s:ApplyCommandAndSetOutput(l:full_cmd, a:cmd)
+  if a:cmd ==# 'fmt'
+    " edit!
+  endif
   redraw
 endfunction
 
-function gobu#RunCurrentFile(go_exec)
+function gobu#RunCurrentFile(go_exec) abort
   execute '!' . a:go_exec . ' run ' . expand('%')
 endfunction
 
-function s:ClearOldGobu()
+function s:ClearOldGobu() abort
   let l:prev_window = winnr()
   let l:prev_window_view = winsaveview()
   execute s:gobu_window . ' wincmd w'
@@ -64,13 +71,20 @@ function s:ClearOldGobu()
   call winrestview(l:prev_window_view)
 endfunction
 
-function! s:SetOutput(full_cmd, cmd)
+function s:ApplyCommandAndSetOutput(full_cmd, cmd)
   let l:errs = system(a:full_cmd)
-  let l:lines = split(s:Trim(l:errs), '\n')
-  if empty(l:lines)
+  call s:SetOutput(a:full_cmd, a:cmd, l:errs)
+endfunction
+
+function! s:SetOutput(full_cmd, cmd, output)
+  let l:lines = split(s:Trim(a:output), '\n')
+  if empty(l:lines) || (a:cmd ==# 'fmt' && !v:shell_error)
     echohl Type
     exe 'echomsg "Gobu: [' . a:full_cmd . '] : SUCCESS"'
     echohl NONE
+    if a:cmd ==# 'fmt'
+      edit!
+    endif
     return
   endif
   let s:oldwindow = winnr()
@@ -98,7 +112,7 @@ function! gobu#Rerun()
   let l:last_full_command = b:executed_full_cmd
   let l:last_command = b:executed_cmd
   close
-  call s:SetOutput(l:last_full_command, l:last_command)
+  call s:ApplyCommandAndSetOutput(l:last_full_command, l:last_command)
 endfunction
 
 function! gobu#ExecuteOnWindow() abort
@@ -119,7 +133,7 @@ function! gobu#ExecuteOnWindow() abort
     let l:pack_pattern = '^\(ok\|FAIL\|?\)\s*\t\(.*\)\t\d\+\.\d\+.*'
     let l:pack_line_num = search(l:pack_pattern, 'nc')
     let l:pack_line = getline(l:pack_line_num)
-    exe s:oldwindow . ' wincmd w'
+    execute s:oldwindow . ' wincmd w'
 
     let l:dir = ''
     if !filereadable(l:file) && l:pack_line_num > 0
