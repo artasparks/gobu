@@ -1,4 +1,5 @@
-let s:gobufile = substitute(tempname(), '\w\+$', 'GobuWindow', '')
+let s:gobu_name = 'GobuWindow'
+let s:gobufile = substitute(tempname(), '\w\+$', s:gobu_name, '')
 let s:gobu_window = -2
 
 let s:allowed_commands = {
@@ -12,8 +13,14 @@ let s:allowed_commands = {
 function! gobu#GoCommand(cmd, ...) abort
   let l:go_exec = 'go'
   let l:is_appengine = 0
-  if expand('%:p') =~# '/go_appengine/' && g:gobu_detect_appengine
-    let l:go_exec = expand('%:p:h:s?/go_appengine/.*?/go_appengine/goapp?')
+  if g:gobu_detect_appengine
+    let l:app_yaml = findfile('app.yaml', '.;')
+    if l:app_yaml == 'app.yaml'
+      let l:app_yaml = expand('%:p:h') . '/' . l:app_yaml
+    endif
+    if !empty(l:app_yaml)
+      let l:go_exec = 'goapp'
+    endif
     let l:is_appengine = 1
   endif
 
@@ -29,12 +36,11 @@ function! gobu#GoCommand(cmd, ...) abort
       " Thus, just do
       let l:desired_cmd = 'build'
     endif
+    call s:ClearOldGobu()
     let l:full_cmd = l:go_exec . ' ' . l:desired_cmd
   else
     let l:do_recursive = a:0 >= 1 ? a:1 : 0
-    if bufexists(s:gobufile) && bufloaded(s:gobufile)
-      call s:ClearOldGobu()
-    endif
+    call s:ClearOldGobu()
     let l:curdir = expand('%:p:h')
     let l:packcmd = 'cd ' . l:curdir . ' && ' . l:go_exec . ' list'
     let l:package = s:Trim(system(l:packcmd))
@@ -63,12 +69,14 @@ function gobu#RunCurrentFile(go_exec) abort
 endfunction
 
 function s:ClearOldGobu() abort
+  let l:gobu_winnum = bufwinnr(s:gobu_name)
   let l:prev_window = winnr()
-  let l:prev_window_view = winsaveview()
-  execute s:gobu_window . ' wincmd w'
-  close
-  execute l:prev_window . ' wincmd w'
-  call winrestview(l:prev_window_view)
+  if l:gobu_winnum != -1
+    let l:prev_window_view = winsaveview()
+    execute l:gobu_winnum . ' wincmd w'
+    close
+    call winrestview(l:prev_window_view)
+  endif
 endfunction
 
 function s:ApplyCommandAndSetOutput(full_cmd, cmd)
@@ -76,13 +84,15 @@ function s:ApplyCommandAndSetOutput(full_cmd, cmd)
   call s:SetOutput(a:full_cmd, a:cmd, l:errs)
 endfunction
 
-function! s:SetOutput(full_cmd, cmd, output)
+function! s:SetOutput(full_cmd, cmd, output) abort
   let l:lines = split(s:Trim(a:output), '\n')
   if empty(l:lines) || (a:cmd ==# 'fmt' && !v:shell_error)
     echohl Type
     exe 'echomsg "Gobu: [' . a:full_cmd . '] : SUCCESS"'
     echohl NONE
+    call s:ClearOldGobu()
     if a:cmd ==# 'fmt'
+      " Why is this here?
       edit!
     endif
     return
@@ -94,30 +104,34 @@ function! s:SetOutput(full_cmd, cmd, output)
 
   " Restore view in old window and return
   let s:gobu_window = winnr()
-  exe s:oldwindow . ' wincmd w'
+  execute s:oldwindow . ' wincmd w'
   call winrestview(s:saved_view)
-  exe s:gobu_window . ' wincmd w'
+  execute s:gobu_window . ' wincmd w'
 
   let b:executed_full_cmd = a:full_cmd
   let b:executed_cmd = a:cmd
 
   " Set Output
-  nnoremap <buffer> q :q<CR>
+  nnoremap <buffer> q :call gobu#Quit()<CR>
   nnoremap <buffer> <CR> :call gobu#ExecuteOnWindow()<CR>
   nnoremap <buffer> R :call gobu#Rerun()<CR>
 endfunction
 
+function gobu#Quit() abort
+  close
+endfunction
+
 " Rerun the command
-function! gobu#Rerun()
+function! gobu#Rerun() abort
   let l:last_full_command = b:executed_full_cmd
   let l:last_command = b:executed_cmd
-  close
+  call gobu#Quit()
   call s:ApplyCommandAndSetOutput(l:last_full_command, l:last_command)
 endfunction
 
 function! gobu#ExecuteOnWindow() abort
   let l:curline = getline('.')
-  let l:path_regex = '^\t\?\(\.\?/\?[[:alnum:]_/+-]\+\.\(go\|c\|cpp\)\):\(\d*\).*'
+  let l:path_regex = '^\t\?\(\.\?\.\?/\?[[:alnum:]_/+-]\+\.\(go\|c\|cpp\)\):\(\d*\).*'
 
   if l:curline =~ l:path_regex
     let l:file = substitute(l:curline, l:path_regex, '\1', '')
@@ -159,6 +173,27 @@ function! gobu#ExecuteOnWindow() abort
   endif
 endfunction
 
+function! s:SetHeight(num_lines)
+  if a:num_lines < g:gobu_min_winheight
+    exe 'resize ' . g:gobu_min_winheight
+  elseif a:num_lines > g:gobu_max_winheight
+    exe 'resize ' . g:gobu_max_winheight
+  else
+    exe 'resize ' . a:num_lines
+  endif
+  setlocal winfixheight
+endfunction
+
+function s:CreateWindow(lines)
+  call writefile(a:lines, s:gobufile)
+  execute 'bo new ' . s:gobufile
+  call delete(s:gobufile)
+endfunction
+
+function! s:Trim(line)
+  return substitute(a:line, '^\s*\|\(\s\|\n\)*$', '', 'g')
+endfunction
+
 function s:SetWindowDefaults(num_lines)
   cal setpos(".", [0,0,0,0])
   setlocal nonumber
@@ -173,7 +208,7 @@ function s:SetWindowDefaults(num_lines)
     setlocal cursorline
   endif
   if has('syntax')
-    syn match GobuFile /^\t\?\.\?\/\?[[:alnum:]_/+-]\+\.\(go\|c\|cpp\)/ nextgroup=GobuLineNumber
+    syn match GobuFile /^\t\?\.\?\.\?\/\?[[:alnum:]_/+-]\+\.\(go\|c\|cpp\)/ nextgroup=GobuLineNumber
     syn match GobuLineNumber /:\d\+:\?/
     syn match GobuKeyword /goroutine \d*/
     syn keyword GobuFail FAIL
@@ -191,25 +226,4 @@ function s:SetWindowDefaults(num_lines)
     hi def link GobuSpecial Special
     hi def link GobuFail WarningMSG
   endif
-endfunction
-
-function! s:SetHeight(num_lines)
-  if a:num_lines < g:gobu_min_winheight
-    exe 'resize ' . g:gobu_min_winheight
-  elseif a:num_lines > g:gobu_max_winheight
-    exe 'resize ' . g:gobu_max_winheight
-  else
-    exe 'resize ' . a:num_lines
-  endif
-  setlocal winfixheight
-endfunction
-
-function s:CreateWindow(lines)
-  call writefile(a:lines, s:gobufile)
-  exe 'bo new ' . s:gobufile
-  call delete(s:gobufile)
-endfunction
-
-function! s:Trim(line)
-  return substitute(a:line, '^\s*\|\(\s\|\n\)*$', '', 'g')
 endfunction

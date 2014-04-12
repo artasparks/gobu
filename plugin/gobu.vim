@@ -16,3 +16,11 @@ endif
 if !exists('g:gobu_detect_appengine')
   let g:gobu_detect_appengine = 1
 endif
+
+if !exists('g:gobu_assume_appengine')
+  let g:gobu_assume_appengine = 0
+endif
+
+if !exists('g:gobu_appengine_directory')
+  let g:gobu_appengine_directory = ''
+endif
